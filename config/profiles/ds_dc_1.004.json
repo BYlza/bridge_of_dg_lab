@@ -1,0 +1,21 @@
+{
+  "name": "Death Stranding Director's Cut 1.004 (Steam)",
+  "process": "ds.exe",
+  "module": "ds.exe",
+  "size": null,
+  "health": {
+    "type": "int",
+    "max": 1000,
+    "address": "0x73ea84821f0",
+    "pointer": {
+      "module_offset": "0x0",
+      "offsets": []
+    },
+    "signature": null
+  },
+  "_todo": [
+    "address 是本次游戏会话的堆地址，重启游戏后失效。",
+    "稳定后做指针扫描，把 module_offset/offsets 填上，并清掉 address。",
+    "血量 = int32，0-1000（2026-11-24 实测：843 -> 829 精确对应）。"
+  ]
+}

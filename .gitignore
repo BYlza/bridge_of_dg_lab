@@ -1,0 +1,61 @@
+# ───────────────────────── Python ─────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 打包 / 分发
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+
+# 测试与类型检查缓存
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# ───────────────────── 本项目的运行产物 ─────────────────────
+# out/ 里是二维码、内存候选文件、last_hp 记录、日志
+out/
+*.log
+*.etl
+
+# ───────────────────────── 本地配置 ─────────────────────────
+# config/app.json 是「本机」配置：里面有你的局域网 / Tailscale 地址、
+# 你为自己调的上限。默认不提交，仓库里只保留 config/app.example.json。
+# 想用示例作为起点：copy config\app.example.json config\app.json
+config/app.json
+*.local.json
+.env
+.env.*
+
+# ───────────────────── 编辑器 / 系统 ─────────────────────
+.workbuddy/
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
