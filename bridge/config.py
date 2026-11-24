@@ -48,6 +48,11 @@ class AppConfig:
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as fh:
                 raw = json.load(fh)
+        # 环境变量覆盖：换网络 / 换设备时不用改文件，启动脚本直接设一下就行。
+        # 优先级：命令行 --host-ip > BRIDGE_PUBLIC_HOST > app.json > 自动探测
+        env_host = os.environ.get("BRIDGE_PUBLIC_HOST", "").strip()
+        if env_host:
+            raw["public_host"] = env_host
         known = {f for f in cls.__dataclass_fields__ if f != "extra"}
         kwargs = {k: v for k, v in raw.items() if k in known}
         cfg = cls(**kwargs)

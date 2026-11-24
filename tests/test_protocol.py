@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import socket
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,7 +25,18 @@ import websockets  # noqa: E402
 
 from bridge.dglab import WAVEFORMS, DGLabLink  # noqa: E402
 
-PORT = 5699
+def _free_port() -> int:
+    """让系统分配一个空闲端口。
+
+    写死端口（原来的 5699）容易被别的程序占用，一占就直接 assert 失败，
+    看起来像协议坏了。
+    """
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return int(s.getsockname()[1])
+
+
+PORT = int(os.environ.get("BRIDGE_TEST_PORT") or _free_port())
 
 
 async def recv_until(ws, predicate, timeout: float = 5.0) -> dict:

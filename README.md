@@ -26,20 +26,66 @@
 
 ## 快速开始
 
-环境：Windows + Python 3.12 + 已安装 `pymem` / `qrcode` / `pydglab-ws`。
+前置：Windows + Python 3.12 + `pip install pydglab-ws qrcode`。
+
+### 一条命令启动
 
 ```powershell
-cd <项目根目录>
-
-python tests/test_protocol.py     # 协议自检，不需要手机与设备
-python tools/bench_ws.py          # M0：扫码后手动调强度、试波形
-python -m bridge                  # 预览：连设备、读血量、只打印，不输出
-python -m bridge --arm            # 武装：受伤才真的输出
+.\start.ps1 -Arm -Channel B
 ```
 
-- 通道用 `--channel A|B|dual` 选，默认 A；
-- 强度上限、曲线参数都在 `config/app.json`；
-- 多网卡 / 手机热点下扫码连不上：`--host-ip 192.168.137.1`（Windows 移动热点的默认网关地址，请按自己实际网段调整）。
+**想先确认安全？去掉 `-Arm` 就是预览模式** —— 一样会连设备、读血量、在设置页面显示状态，但不会输出：
+
+```powershell
+.\start.ps1
+```
+
+也可以直接双击 `start.cmd`：默认预览模式，出错时窗口会停住方便你看原因。
+
+脚本会自己切到项目目录、找到可用的 Python、检查依赖，缺什么直接告诉你装什么。
+
+| 参数 | 作用 | 默认 |
+|---|---|---|
+| `-Arm` | 真的驱动输出；不加就是预览 | 关 |
+| `-Channel A\|B\|dual` | 驱动哪条通道 | 读 `config/app.json` |
+| `-HostIp <地址>` | 二维码里写的地址（换网络时用） | 读 `config/app.json`，没有再自动探测 |
+| `-Python <路径>` | 指定解释器 | 自动找 `python` |
+| `-DebugLog` | 打印每次输出/回读细节 | 关 |
+| `-DryRun` | 只打印将要执行的命令，不启动 | 关 |
+
+### 启动之后
+
+1. 终端出现二维码 → 手机 DG-Lab App → **SOCKET 控制** → 扫码绑定；
+2. 浏览器打开 <http://127.0.0.1:8765> 看血量、输出强度、调曲线，测试和急停都在这个页面；
+3. 要停：终端按 `Ctrl+C`（自动归零），或者直接关掉郊狼主机电源。
+
+### 换网络 / 手机扫码连不上
+
+二维码里的地址是**启动那一刻**取的，换 Wi-Fi、换热点、Tailscale 重连之后要重启并指定地址：
+
+```powershell
+.\start.ps1 -Arm -Channel B -HostIp 192.168.137.1
+```
+
+也可以用环境变量（优先级：`-HostIp` > `BRIDGE_PUBLIC_HOST` > `config/app.json` > 自动探测）：
+
+```powershell
+$env:BRIDGE_PUBLIC_HOST = "192.168.1.42"   # 换成你自己的地址
+.\start.ps1 -Arm -Channel B
+```
+
+> App 只接受 `ws://`，`wss://` 隧道（ngrok / Cloudflare Tunnel）扫码会直接失败。
+
+### 不用脚本，手动跑
+
+```powershell
+python -m bridge                  # 预览
+python -m bridge --arm --channel B
+python tests/test_protocol.py     # 协议自检，不需要手机与设备
+python tools/bench_ws.py          # 只测「电脑 ↔ 手机 ↔ 郊狼」链路
+```
+
+强度上限、曲线参数、通道都在 `config/app.json`。首次使用先复制示例：`copy config\app.example.json config\app.json`。
 
 完整分步测试见 [docs/TESTING.md](docs/TESTING.md)。
 
@@ -285,11 +331,13 @@ hp = pm.read_float(hp_addr)
 
 ---
 
-## 六、项目结构（规划）
+## 六、项目结构
 
 ```
 bridge_of_dg_lab/
 ├─ README.md
+├─ start.ps1                # 一键启动（参数见「快速开始」）
+├─ start.cmd                # 双击入口，默认预览模式
 ├─ docs/
 │  ├─ ONE-PAGER.md          # 一页纸方案
 │  └─ TESTING.md            # 分步测试手册（M0 → M2）
@@ -297,19 +345,22 @@ bridge_of_dg_lab/
 │  ├─ __main__.py           # 入口：主循环 + 输出调度
 │  ├─ dglab.py              # pydglab-ws 的线程安全薄封装 + 波形数据
 │  ├─ qr.py                 # 二维码（终端 ASCII + out/qr.svg）
-│  ├─ reader.py             # 进程/模块/指针链/AOB 校验
+│  ├─ reader.py             # 进程/模块/指针链/AOB 校验（只读）
 │  ├─ mapper.py             # 强度模型、限速、衰减、通道分配
 │  ├─ safety.py             # 硬上限、看门狗、急停、冷却
-│  └─ config.py             # 配置加载
+│  ├─ webui.py              # 设置页面 http://127.0.0.1:8765
+│  └─ config.py             # 配置加载（支持 BRIDGE_PUBLIC_HOST 覆盖）
 ├─ config/
-│  ├─ app.json              # 用户配置（通道、上限、曲线）
+│  ├─ app.example.json      # 配置模板（仓库里只提交这个）
+│  ├─ app.json              # 你的本机配置，已被 .gitignore 排除
 │  └─ profiles/             # 每游戏版本一份内存 profile
 ├─ tools/
+│  ├─ relocate.py           # 按当前血量重定位地址
 │  ├─ hp_probe.py           # 验证/写入血量指针链
 │  └─ bench_ws.py           # 只测郊狼链路，手动打波形
 ├─ tests/
 │  └─ test_protocol.py      # 不依赖设备的协议自检
-└─ out/                     # 二维码、日志等运行产物
+└─ out/                     # 二维码、日志等运行产物（已忽略）
 ```
 
 ---
